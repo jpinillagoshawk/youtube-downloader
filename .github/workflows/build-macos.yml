@@ -45,7 +45,6 @@ jobs:
             --windowed \
             --onedir \
             --add-data "ffmpeg/bin:ffmpeg/bin" \
-            --icon NONE \
             --noconfirm \
             "youtube-downloader v3.py"
 
