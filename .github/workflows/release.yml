@@ -1,0 +1,74 @@
+name: Release macOS App
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install FFmpeg
+        run: |
+          brew install ffmpeg
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install yt-dlp pyinstaller
+
+      - name: Create FFmpeg bundle directory
+        run: |
+          mkdir -p ffmpeg/bin
+          cp $(which ffmpeg) ffmpeg/bin/
+          cp $(which ffprobe) ffmpeg/bin/
+
+      - name: Build macOS App with PyInstaller
+        run: |
+          pyinstaller \
+            --name "YouTube MP3 Downloader" \
+            --windowed \
+            --onedir \
+            --add-data "ffmpeg/bin:ffmpeg/bin" \
+            --icon NONE \
+            --noconfirm \
+            "youtube-downloader v3.py"
+
+      - name: Create DMG
+        run: |
+          mkdir -p dmg_contents
+          cp -r "dist/YouTube MP3 Downloader.app" dmg_contents/
+          hdiutil create -volname "YouTube MP3 Downloader" \
+            -srcfolder dmg_contents \
+            -ov -format UDZO \
+            "YouTube-MP3-Downloader-macOS.dmg"
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        if: github.event_name == 'release'
+        with:
+          files: YouTube-MP3-Downloader-macOS.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact (manual trigger)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: YouTube-MP3-Downloader-macOS-${{ github.event.inputs.version }}
+          path: YouTube-MP3-Downloader-macOS.dmg
