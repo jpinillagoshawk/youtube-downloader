@@ -14,6 +14,19 @@ IS_WINDOWS = platform.system() == 'Windows'
 IS_MACOS = platform.system() == 'Darwin'
 FFMPEG_EXE = 'ffmpeg.exe' if IS_WINDOWS else 'ffmpeg'
 
+def setup_ffmpeg_path():
+    """Add bundled ffmpeg to PATH so yt-dlp can find it."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    ffmpeg_dir = os.path.join(script_dir, 'ffmpeg', 'bin')
+    if os.path.exists(ffmpeg_dir):
+        # Prepend ffmpeg directory to PATH
+        os.environ['PATH'] = ffmpeg_dir + os.pathsep + os.environ.get('PATH', '')
+        return True
+    return False
+
+# Setup ffmpeg path at module load time
+setup_ffmpeg_path()
+
 def get_app_path():
     """Get the application path, handling PyInstaller bundled apps."""
     if getattr(sys, 'frozen', False):
@@ -317,7 +330,8 @@ class YouTubeDownloader:
                 ],
                 'logger': self.create_logger(),
                 'verbose': True,  # Add verbose output for better debugging
-                'no_check_certificate': True  # Skip certificate validation
+                'no_check_certificate': True,  # Skip certificate validation
+                'noplaylist': True,  # Only download single video, not playlist
             }
             
             # Add FFmpeg path if specified by user
